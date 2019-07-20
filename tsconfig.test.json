@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2019"],
+    "module": "commonjs",
+    "target": "ES2019"
+  },
+  "include": [
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
+}
