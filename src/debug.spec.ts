@@ -4,7 +4,7 @@
 
 import * as Debug from './debug';
 
-test('test debug LatencyTimeLog', function() {
+test('test debug LatencyTimeLog', function(done) {
   const obj = {
     sync(): Promise<number> {
       return new Promise(resolve => {
@@ -23,5 +23,7 @@ test('test debug LatencyTimeLog', function() {
     '_____time spend：[time]'
   );
 
-  obj.sync();
+  obj.sync().then(() => {
+    done();
+  });
 });

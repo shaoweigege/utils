@@ -4,8 +4,7 @@
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "checkJs": false,
-    "declaration": true,
-    "declarationDir": "src/typings",
+    "declaration": false,
     "diagnostics": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -52,6 +51,7 @@
   "exclude": [
     "node_modules",
     "src/**/*.spec.ts",
+    "src/**/*.test.ts",
     "src/**/__tests__/*.ts"
   ]
 }
