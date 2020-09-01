@@ -16,8 +16,8 @@ export function Noop() {}
  * @param args
  * @return {Function}
  */
-export function ApplyBind(fn: Function, context: object, ...args: any[]) {
-  return function(...argsInner: any[]) {
+export function ApplyBind(fn: (...args: any[]) => any, context: any, ...args: any[]) {
+  return function (...argsInner: any[]) {
     return fn.apply(context || this, [...args, ...argsInner]);
   };
 }
@@ -53,7 +53,7 @@ export function Debounce(
     }
   }
 
-  return function(...args: any[]) {
+  return function (...args: any[]) {
     context = this;
 
     const now = Date.now();
@@ -96,7 +96,7 @@ export function Debounce(
  * true：当调用方法时，未到达delay指定的时间间隔，则启动计时器延迟调用fn函数，
  * 若后续在既未达到delay指定的时间间隔和fn函数又未被调用的情况下调用返回值方法，则被调用请求将被忽略。
  */
-export function Throttle(fn: Function, delay: number, immediate = true, trailing = true) {
+export function Throttle(fn: (...args: any[]) => any, delay: number, immediate = true, trailing = true) {
   let timer: any; // 定时器变量
   let previous = 0; // 时间戳 用于记录上次执行的时间点
   // let context; // fn函数执行的作用域
@@ -114,7 +114,7 @@ export function Throttle(fn: Function, delay: number, immediate = true, trailing
     // context = args = undefined;
   }
 
-  return function() {
+  return function () {
     // context = this;
 
     // args = arguments;
@@ -202,7 +202,7 @@ export function ConvertToDBC(str: string) {
  */
 export function ConvertBridgeStrToHump(bridge: string) {
   if (bridge) {
-    return bridge.replace(/-(\w)/g, function(all, letter) {
+    return bridge.replace(/-(\w)/g, function (all, letter) {
       return letter.toUpperCase();
     });
   }
@@ -318,7 +318,7 @@ export function ConvertBase64ToBlob(b64Data: string, contentType?: string, slice
 export function ConvertToQueryParameters(obj: any) {
   const params: any[] = [];
 
-  Object.keys(obj).forEach(key => {
+  Object.keys(obj).forEach((key) => {
     let value = obj[key];
     // 如果值为 null or undefined 则将其置空
     if (IsNullOrUndefined(value)) {
@@ -476,7 +476,7 @@ export function Extend(target: any, ...args: any[]) {
 
 function deepCloneArray(arr: any[]) {
   const clone: any[] = [];
-  arr.forEach(function(item, index) {
+  arr.forEach(function (item, index) {
     if (typeof item === 'object' && item !== null) {
       if (Array.isArray(item)) {
         clone[index] = deepCloneArray(item);
@@ -515,13 +515,13 @@ export function DeepExtend(...params: any[]) {
   let val;
   let src;
 
-  args.forEach(function(obj: any) {
+  args.forEach(function (obj: any) {
     // skip argument if isn't an object, is null, or is an array
     if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
       return;
     }
 
-    Object.keys(obj).forEach(function(key) {
+    Object.keys(obj).forEach(function (key) {
       src = target[key]; // source value
       val = obj[key]; // new value
 
@@ -561,7 +561,7 @@ export function DeepExtend(...params: any[]) {
  * @param paramStr 查询字符串
  * @returns object 参数对象
  */
-export function GetParamsFromUrl(paramStr?: string): object {
+export function GetParamsFromUrl(paramStr?: string): any {
   const s = (paramStr || '').split('?');
   if (s.length) {
     paramStr = s[s.length - 1];
@@ -576,4 +576,103 @@ export function GetParamsFromUrl(paramStr?: string): object {
     return obj;
   }
   return undefined;
+}
+
+type byProp<T> = (arg0: T) => string | number;
+
+/**
+ * group-By
+ * @param arr
+ * @param by
+ * @param select
+ * @constructor
+ */
+export function GroupBy<T, T2>(
+  arr: T[],
+  by: string | byProp<T>,
+  select?: (arg0: T) => T2
+): Array<{
+  key: string | number;
+  children: T[];
+}> {
+  const res = arr.reduce(
+    function (prev: any, cur) {
+      let key;
+      if (Object.prototype.toString.call(by) === '[object Function]') {
+        key = (by as byProp<T>)(cur);
+      } else if (Object.prototype.toString.call(by) === '[object String]') {
+        key = cur[by as keyof T];
+      } else {
+        throw new Error('GroupBy: the key for group by is not valid.');
+      }
+      let idx = -1;
+      let upd = true;
+      if (
+        Object.prototype.toString.call(key) === '[object Null]' ||
+        Object.prototype.toString.call(key) === '[object Undefined]'
+      ) {
+        if (prev.undef < 0) {
+          upd = false;
+          prev.undef = prev.arr.length;
+        }
+        idx = prev.undef;
+      } else if (
+        Object.prototype.toString.call(key) !== '[object String]' ||
+        Object.prototype.toString.call(key) !== '[object Number]'
+      ) {
+        if (!Object.prototype.hasOwnProperty.call(prev.keys, key)) {
+          upd = false;
+          prev.keys[key] = prev.arr.length;
+        }
+        idx = prev.keys[key];
+      }
+      if (idx > -1) {
+        if (upd) {
+          prev.arr[idx].children.push(cur);
+        } else {
+          let item: T & { children: T[] };
+          if (select) {
+            item = Object.assign({}, item, select(cur));
+          }
+          item.children = [cur];
+          prev.arr.push(item);
+        }
+      }
+      return prev;
+    },
+    {
+      undef: -1,
+      keys: {},
+      arr: []
+    }
+  );
+
+  return res.arr;
+}
+
+/**
+ * 替代原生 toFixed 函数，解决 js 精度丢失问题
+ * @param length
+ * @constructor
+ */
+export function ToFixed(length = 2) {
+  let carry = 0;
+
+  const str = this + '';
+  const dotIndex = str.indexOf('.');
+
+  let n: any = str.substr(dotIndex + length + 1, 1);
+
+  if (n) {
+    n = parseInt(n);
+  }
+
+  if (n >= 5) {
+    carry = 1;
+  }
+
+  const multiple = Math.pow(10, length);
+  const num = Math.floor(this * multiple) + carry;
+
+  return (num / multiple) as any;
 }

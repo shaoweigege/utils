@@ -12,14 +12,15 @@ const Ts = require('gulp-typescript');
 const Webpack = require('webpack');
 const Globby = require('globby');
 
-Gulp.task('build', async function() {
+Gulp.task('build', async function () {
   const ENV = require('../env')();
 
   // build esm
   const TsProject = Ts.createProject(Path.join(ENV.rootPath, 'tsconfig.json'), {
     declaration: true,
     declarationFiles: true,
-    module: 'esnext'
+    module: 'esnext',
+    target: 'esnext'
   });
   const tsResult = await Gulp.src([
     Path.resolve(ENV.srcPath, '*.ts'),
@@ -31,7 +32,8 @@ Gulp.task('build', async function() {
   // build command.js
   const TsProjectCMD = Ts.createProject(Path.join(ENV.rootPath, 'tsconfig.json'), {
     declarationFiles: false,
-    module: 'commonjs'
+    module: 'commonjs',
+    target: 'esnext'
   });
   const tsResultCMD = await Gulp.src([
     Path.resolve(ENV.srcPath, '*.ts'),
@@ -42,7 +44,7 @@ Gulp.task('build', async function() {
   Merge([
     tsResultCMD.js
       .pipe(
-        Rename(function(path) {
+        Rename(function (path) {
           path.basename += '.cmd';
         })
       )
@@ -57,7 +59,7 @@ Gulp.task('build', async function() {
     '!' + Path.resolve(ENV.srcPath, '**/*.test.ts').replace(/\\/g, '/')
   ]);
   await Promise.all(
-    files.map(file => {
+    files.map((file) => {
       const filename = Path.basename(file).replace(Path.extname(file), '');
       return runWebpack(
         {
@@ -94,11 +96,11 @@ Gulp.task('build', async function() {
   );
 
   // copy npm publish files to output
-  await Gulp.src(['package.json', 'README.md'].map(x => Path.join(ENV.rootPath, x))).pipe(Gulp.dest(ENV.outputPath));
+  await Gulp.src(['package.json', 'README.md'].map((x) => Path.join(ENV.rootPath, x))).pipe(Gulp.dest(ENV.outputPath));
 });
 
 function runWebpack(options, isLog = false) {
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     Webpack(options, (err, stats) => {
       if (err || (stats && stats.compilation && stats.compilation.errors && stats.compilation.errors.length)) {
         if (!err) {
